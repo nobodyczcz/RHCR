@@ -6,10 +6,53 @@
 #include <random>
 #include <chrono>
 
+inline std::vector<int> read_int_vec(string fname){
+    std::vector<int> res;
+	string line;
+	std::ifstream myfile(fname.c_str());
+	if (!myfile.is_open()) return {};
+
+	getline(myfile, line);
+    while (!myfile.eof() && line[0] == '#') {
+        getline(myfile, line);
+    }
+
+    boost::char_separator<char> sep(",");
+    boost::tokenizer<boost::char_separator<char>> tok(line, sep);
+    boost::tokenizer<boost::char_separator<char>>::iterator beg = tok.begin();
+
+    int team_size = atoi((*beg).c_str());
+    // My benchmark
+    for (int i = 0; i < team_size; i++) {
+
+        getline(myfile, line);
+        while (!myfile.eof() && line[0] == '#'){
+            getline(myfile, line);
+        }
+        boost::tokenizer<boost::char_separator<char>> tok(line, sep);
+        boost::tokenizer<boost::char_separator<char>>::iterator beg = tok.begin();
+        // read start [row,col] for agent i
+        res.push_back(atoi((*beg).c_str()));
+
+    }
+    myfile.close();
+
+	return res;
+}
+bool KivaGrid::load(std::string fname,std::string starts, std::string tasks, int k){
+	this->agents = read_int_vec(starts);
+	this->tasks = read_int_vec(tasks);
+	this->k = k;
+	return load_map(fname);
+};
+
+
 bool KivaGrid::load_map(std::string fname)
 {
     std::size_t pos = fname.rfind('.');      // position of the file extension
     auto ext_name = fname.substr(pos, fname.size());     // get the name without extension
+
+
     if (ext_name == ".grid")
         return load_weighted_map(fname);
     else if (ext_name == ".map")
@@ -103,37 +146,46 @@ bool KivaGrid::load_unweighted_map(std::string fname)
     clock_t t = std::clock();
 	std::size_t pos = fname.rfind('.');      // position of the file extension
     map_name = fname.substr(0, pos);     // get the name without extension
-    getline (myfile, line); 
-	
-	
-	boost::char_separator<char> sep(",");
-	boost::tokenizer< boost::char_separator<char> > tok(line, sep);
-	boost::tokenizer< boost::char_separator<char> >::iterator beg = tok.begin();
+    
+	getline (myfile, line);
+
+	boost::char_separator<char> sep(" ");
+	getline(myfile, line);
+	boost::tokenizer<boost::char_separator<char>> tok(line, sep);
+	boost::tokenizer<boost::char_separator<char>>::iterator beg;
+	beg = tok.begin();
+	beg++;
 	rows = atoi((*beg).c_str()); // read number of rows
+	getline(myfile, line);
+	boost::tokenizer<boost::char_separator<char>> tok2(line, sep);
+	beg = tok2.begin();
 	beg++;
 	cols = atoi((*beg).c_str()); // read number of cols
+	getline(myfile, line); // skip "map"
+
+
 	move[0] = 1;
 	move[1] = -cols;
 	move[2] = -1;
 	move[3] = cols;
 
-	std::stringstream ss;
-	getline(myfile, line);
-	ss << line;
-	int num_endpoints;
-	ss >> num_endpoints;
+	// std::stringstream ss;
+	// getline(myfile, line);
+	// ss << line;
+	// int num_endpoints;
+	// ss >> num_endpoints;
 
-	int agent_num;
-	ss.clear();
-	getline(myfile, line);
-	ss << line;
-	ss >> agent_num;
+	// int agent_num;
+	// ss.clear();
+	// getline(myfile, line);
+	// ss << line;
+	// ss >> agent_num;
 
-	ss.clear();
-	getline(myfile, line);
-	ss << line;
-	int maxtime;
-	ss >> maxtime;
+	// ss.clear();
+	// getline(myfile, line);
+	// ss << line;
+	// int maxtime;
+	// ss >> maxtime;
 
 	//this->agents.resize(agent_num);
 	//endpoints.resize(num_endpoints + agent_num);
@@ -153,18 +205,18 @@ bool KivaGrid::load_unweighted_map(std::string fname)
 			{
 				types[id] = "Obstacle";
 			}
-			else if (line[j] == 'e') //endpoint
+			else if (line[j] == 'e' || line[j] == 'E' || line[j] == 'S') //endpoint
 			{
 				types[id] = "Endpoint";
 				weights[id][4] = 1;
 				endpoints.push_back(id);
 			}
-			else if (line[j] == 'r') //robot rest
-			{
-				types[id] = "Home";
-				weights[id][4] = 1;
-				agent_home_locations.push_back(id);
-			}
+			// else if (line[j] == 'r') //robot rest
+			// {
+			// 	types[id] = "Home";
+			// 	weights[id][4] = 1;
+			// 	agent_home_locations.push_back(id);
+			// }
 			else
 			{
 				types[id] = "Travel";
@@ -172,6 +224,14 @@ bool KivaGrid::load_unweighted_map(std::string fname)
 			}
 		}
 	}
+	int i = 0;
+	for(int loc : agents){
+		agent_home_locations.push_back(loc);
+		if (agent_home_locations.size() == k)
+			break;
+		i++;
+	}
+
 	shuffle(agent_home_locations.begin(), agent_home_locations.end(), std::default_random_engine());
 	for (int i = 0; i < cols * rows; i++)
 	{

@@ -11,6 +11,8 @@ public:
 
 	void simulate(int simulation_time);
 
+	std::vector<int> task_counter;
+
 
 private:
 	const KivaGrid& G;

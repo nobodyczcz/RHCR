@@ -58,10 +58,18 @@ void KivaSystem::initialize_goal_locations()
 		return;
 	// Choose random goal locations
 	// Goal locations are not necessarily unique
+	task_counter.resize(num_of_drives);
 	for (int k = 0; k < num_of_drives; k++)
 	{
-		int goal = G.endpoints[rand() % (int)G.endpoints.size()];
-		goal_locations[k].emplace_back(goal, 0);
+		// int goal = G.endpoints[rand() % (int)G.endpoints.size()];
+		// goal_locations[k].emplace_back(goal, 0);
+		int i = task_counter[k] * num_of_drives + k;
+		std::cout << i <<","<< G.tasks.size() <<","<<G.agents.size()<< std::endl;
+
+		int loc = G.tasks[i% G.tasks.size()];
+		goal_locations[k].emplace_back(loc, 0);
+		task_counter[k]++;
+
 	}
 }
 
@@ -79,13 +87,17 @@ void KivaSystem::update_goal_locations()
 			int curr = paths[k][timestep].location; // current location
 			if (goal_locations[k].empty())
 			{
-				int next = G.endpoints[rand() % (int)G.endpoints.size()];
-				while (next == curr || held_endpoints.find(next) != held_endpoints.end())
-				{
-					next = G.endpoints[rand() % (int)G.endpoints.size()];
-				}
-				goal_locations[k].emplace_back(next, 0);
-				held_endpoints.insert(next);
+				// int next = G.endpoints[rand() % (int)G.endpoints.size()];
+				// while (next == curr || held_endpoints.find(next) != held_endpoints.end())
+				// {
+				// 	next = G.endpoints[rand() % (int)G.endpoints.size()];
+				// }
+				int i = task_counter[k] * num_of_drives + k;
+				int loc = G.tasks[i% G.tasks.size()];
+				goal_locations[k].emplace_back(loc, 0);
+				task_counter[k]++;
+				// goal_locations[k].emplace_back(next, 0);
+				held_endpoints.insert(loc);
 			}
 			if (paths[k].back().location == goal_locations[k].back().first &&  // agent already has paths to its goal location
 				paths[k].back().timestep >= goal_locations[k].back().second) // after its release time
@@ -175,23 +187,28 @@ void KivaSystem::update_goal_locations()
 					// The agent might finish its tasks during the next planning horizon
 				{
 					// assign a new task
-					pair<int, int> next;
-					if (G.types[goal.first] == "Endpoint")
-					{
-						do
-						{
-							next = make_pair(G.endpoints[rand() % (int)G.endpoints.size()], 0);
-						} while (next == goal);
-					}
-					else
-					{
-						std::cout << "ERROR in update_goal_function()" << std::endl;
-						std::cout << "The fiducial type should not be " << G.types[curr] << std::endl;
-						exit(-1);
-					}
-					goal_locations[k].emplace_back(next);
-					min_timesteps += G.get_Manhattan_distance(next.first, goal.first); // G.heuristics.at(next)[goal];
-					goal = next;
+					// pair<int, int> next;
+					// if (G.types[goal.first] == "Endpoint")
+					// {
+					// 	do
+					// 	{
+					// 		next = make_pair(G.endpoints[rand() % (int)G.endpoints.size()], 0);
+					// 	} while (next == goal);
+					// }
+					// else
+					// {
+					// 	std::cout << "ERROR in update_goal_function()" << std::endl;
+					// 	std::cout << "The fiducial type should not be " << G.types[curr] << std::endl;
+					// 	exit(-1);
+					// }
+					int i = task_counter[k] * num_of_drives + k;
+					int loc = G.tasks[i% G.tasks.size()];
+					goal_locations[k].emplace_back(loc, 0);
+					task_counter[k]++;
+					
+					// goal_locations[k].emplace_back(next);
+					min_timesteps += G.get_Manhattan_distance(loc, goal.first); // G.heuristics.at(next)[goal];
+					goal = goal_locations[k].back();
 				}
 			}
 		}
@@ -211,8 +228,14 @@ void KivaSystem::simulate(int simulation_time)
 		std::cout << "Timestep " << timestep << std::endl;
 
 		update_start_locations();
+		std::cout << "Update goals" << std::endl;
+
 		update_goal_locations();
+
+		std::cout << "Solve" << std::endl;
 		solve();
+
+		std::cout << "move" << std::endl;
 
 		// move drives
 		auto new_finished_tasks = move();
