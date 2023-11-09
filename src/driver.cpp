@@ -131,6 +131,9 @@ int main(int argc, char** argv)
 		("prioritize_start", po::value<bool>()->default_value(true), "Prioritize waiting at start locations")
 		("suboptimal_bound", po::value<double>()->default_value(1), "Suboptimal bound for ECBS")
 		("log", po::value<bool>()->default_value(false), "save the search trees (and the priority trees)")
+		("r-starts",po::value<std::string>()->default_value(""), "robot runner start locs")
+		("r-tasks", po::value<std::string>()->default_value(""), "robot goal start locs")
+
 		;
 	clock_t start_time = clock();
 	po::variables_map vm;
@@ -178,7 +181,7 @@ int main(int argc, char** argv)
 	if (vm["scenario"].as<string>() == "KIVA")
 	{
 		KivaGrid G;
-		if (!G.load_map(vm["map"].as<std::string>()))
+		if (!G.load(vm["map"].as<std::string>(), vm["r-starts"].as<std::string>(),vm["r-tasks"].as<std::string>(), vm["agentNum"].as<int>()))
 			return -1;
 		MAPFSolver* solver = set_solver(G, vm);
 		KivaSystem system(G, *solver);
